@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": {
+      "item": "minecraft:allium"
+    },
+    "P": {
+      "item": "minecraft:paper"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "APA",
+    "AAA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "kimmylove:love_letter"
+  }
+}
