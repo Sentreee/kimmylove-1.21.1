@@ -1,5 +1,6 @@
 package net.kimmylove.sentree.item.custom;
 
+import net.kimmylove.sentree.KimmyLoveMod;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -201,7 +202,7 @@ public class LoveLetterItem extends Item {
         ItemStack stack = user.getStackInHand(hand);
 
         // Block everyone except the one UUID
-        if (!user.getUuid().equals(ALLOWED_UUIDS)) {
+        if (!KimmyLoveMod.ALLOWED_UUIDS.contains(user.getUuid())) {
             if (!world.isClient) {
                 user.sendMessage(Text.literal("This isn't for you").formatted(Formatting.RED), false);
             }

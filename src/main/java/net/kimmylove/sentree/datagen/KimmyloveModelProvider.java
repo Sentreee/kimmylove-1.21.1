@@ -21,5 +21,6 @@ public class KimmyloveModelProvider extends FabricModelProvider {
     @Override
     public void generateItemModels(ItemModelGenerator itemModelGenerator) {
         itemModelGenerator.register(KimmyLoveMod.LOVE_LETTER, Models.GENERATED);
+        itemModelGenerator.register(KimmyLoveMod.ASH, Models.GENERATED); // NEW
     }
 }
