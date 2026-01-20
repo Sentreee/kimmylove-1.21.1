@@ -1,7 +1,10 @@
 package net.kimmylove.sentree;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.kimmylove.sentree.commands.AllowedUsersState;
+import net.kimmylove.sentree.commands.KimmyloveCommands;
 import net.kimmylove.sentree.item.custom.LoveLetterItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -38,10 +41,17 @@ public class KimmyLoveMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		// Register commands at startup
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+				KimmyloveCommands.register(dispatcher)
+		);
+
 		// If someone not allowed holds the letter, it turns into Ash
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			var state = AllowedUsersState.get(server); // <-- use saved allow-list
+
 			for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-				if (ALLOWED_UUIDS.contains(player.getUuid())) continue;
+				if (state.isAllowed(player.getUuid())) continue; // <-- NOT the constant set
 
 				convertHandIfLetter(player, Hand.MAIN_HAND);
 				convertHandIfLetter(player, Hand.OFF_HAND);

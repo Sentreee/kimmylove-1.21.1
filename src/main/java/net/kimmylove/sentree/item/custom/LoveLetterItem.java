@@ -1,10 +1,14 @@
 package net.kimmylove.sentree.item.custom;
 
+import net.kimmylove.sentree.commands.AllowedUsersState;
 import net.kimmylove.sentree.KimmyLoveMod;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
@@ -12,19 +16,12 @@ import net.minecraft.util.TypedActionResult;
 import net.minecraft.world.World;
 
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 public class LoveLetterItem extends Item {
 
-    private static final Set<UUID> ALLOWED_UUIDS = Set.of(
-            UUID.fromString("c52855ed-a8f6-4a15-89bd-394dc8a15294"),
-            UUID.fromString("42090b34-c494-4587-a385-d4d506656355")
-    );
-
     private static final List<String> MESSAGES = List.of(
             // ENGLISH (original)
-            "Kimmy, you are my favorite person in every world.",
+            "You are my favorite person in every world.",
             "No matter what happens, I'm always on your team.",
             "If I could, I'd give you a hug through the screen.",
             "You make my life feel warm and bright.",
@@ -133,7 +130,7 @@ public class LoveLetterItem extends Item {
             "I don’t care about the drama — I care about us.",
 
             // FRANÇAIS (original)
-            "Je t'aime, Kimmy.",
+            "Je t'aime, bébé.",
             "T'es mon rayon de soleil.",
             "Mon coeur est à toi.",
             "Je pense à toi tout le temps.",
@@ -197,24 +194,58 @@ public class LoveLetterItem extends Item {
         super(settings);
     }
 
+    /**
+     * If an unauthorized player HOLDS the letter (main hand or offhand),
+     * it converts into Ash and shows a message once.
+     */
+    @Override
+    public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
+        if (world.isClient) return;
+        if (!(entity instanceof PlayerEntity player)) return;
+
+        boolean isHeld = selected || player.getOffHandStack() == stack;
+        if (!isHeld) return;
+
+        MinecraftServer server = world.getServer();
+        if (server == null) return;
+
+        if (!AllowedUsersState.get(server).isAllowed(player.getUuid())) {
+            // Convert the held stack into Ash
+            ItemStack ash = new ItemStack(KimmyLoveMod.ASH, stack.getCount());
+
+            if (player.getOffHandStack() == stack) {
+                player.setStackInHand(Hand.OFF_HAND, ash);
+            } else {
+                player.getInventory().setStack(slot, ash);
+            }
+
+            // Message ONCE (cooldown gate prevents spam)
+            if (!player.getItemCooldownManager().isCoolingDown(KimmyLoveMod.ASH)) {
+                player.sendMessage(Text.literal("This letter isn't for you").formatted(Formatting.RED), false);
+                player.getItemCooldownManager().set(KimmyLoveMod.ASH, 40); // 2 seconds
+            }
+        }
+    }
+
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);
 
-        // Block everyone except the one UUID
-        if (!KimmyLoveMod.ALLOWED_UUIDS.contains(user.getUuid())) {
-            if (!world.isClient) {
-                user.sendMessage(Text.literal("This isn't for you").formatted(Formatting.RED), false);
-            }
-            return TypedActionResult.fail(stack);
-        }
-
         if (!world.isClient) {
+            MinecraftServer server = world.getServer();
+            if (server == null) return TypedActionResult.fail(stack);
+
+            // Only allow whitelisted UUIDs (defaults + command-added)
+            if (!AllowedUsersState.get(server).isAllowed(user.getUuid())) {
+                user.sendMessage(Text.literal("This letter isn't for you").formatted(Formatting.RED), false);
+                return TypedActionResult.fail(stack);
+            }
+
             int i = world.getRandom().nextInt(MESSAGES.size());
             user.sendMessage(Text.literal("❤ " + MESSAGES.get(i)), false);
 
             EquipmentSlot slot = (hand == Hand.MAIN_HAND) ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
-            stack.damage(1, user, slot); // 50 uses total if maxDamage(50)
+            stack.damage(1, user, slot);
 
             user.getItemCooldownManager().set(this, 20);
         }
@@ -223,7 +254,7 @@ public class LoveLetterItem extends Item {
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, net.minecraft.item.tooltip.TooltipType type) {
-        tooltip.add(Text.translatable("I Love You, Kimmy").formatted(Formatting.GRAY));
+    public void appendTooltip(ItemStack stack, Item.TooltipContext context, List<Text> tooltip, TooltipType type) {
+        tooltip.add(Text.literal("I Love You, Baby").formatted(Formatting.GRAY));
     }
 }
